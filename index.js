@@ -39,7 +39,6 @@ app.post('/scrape', async (req, res) => {
     await browser.close();
 
     console.log('✅ HTML erfolgreich extrahiert.');
-    console.log(content);
     res.send(content);
   } catch (error) {
     console.error('❌ Fehler beim Scraping:', error);
