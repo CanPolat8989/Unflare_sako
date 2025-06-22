@@ -1,55 +1,49 @@
+// index.js (für den Unflare-Server)
 import express from 'express';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 const app = express();
-const port = process.env.PORT || 5002;
-
 app.use(express.json());
+
+puppeteer.use(StealthPlugin());
 
 app.post('/scrape', async (req, res) => {
   const { url, timeout = 60000 } = req.body;
 
-  console.log(`📥 Anfrage erhalten für URL: ${url}`);
+  if (!url) {
+    return res.status(400).json({ error: 'URL fehlt' });
+  }
 
   try {
+    console.log(`🌍 Starte Unflare-Scraping für: ${url}`);
+
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ]
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
-
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
     );
 
-    console.log('🌐 Öffne Seite...');
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
+    await page.waitForTimeout(8000); // Warte ggf. auf Inhalte
 
-    console.log('📄 Extrahiere HTML...');
-    const content = await page.content();
-
+    const html = await page.content();
     await browser.close();
 
-    console.log('✅ HTML erfolgreich extrahiert.');
-    res.send(content);
-  } catch (error) {
-    console.error('❌ Fehler beim Scraping:', error);
-    res.status(500).send({ error: error.message });
+    console.log(`✅ HTML erfolgreich geladen (${html.length} Zeichen)`);
+    res.send(html);
+  } catch (err) {
+    console.error(`❌ Fehler im Unflare-Scraper:`, err.message);
+    res.status(500).json({ error: 'Scraping fehlgeschlagen', details: err.message });
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('🟢 Unflare Scraper läuft.');
-});
-
-app.listen(port, () => {
-  console.log(`🚀 Server läuft auf Port ${port}`);
+const PORT = process.env.PORT || 5002;
+app.listen(PORT, () => {
+  console.log(`✅ Unflare-Server läuft auf Port ${PORT}`);
 });
