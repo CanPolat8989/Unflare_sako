@@ -1,8 +1,8 @@
 {
   "name": "unflare",
   "type": "module",
-  "scripts": {
-    "start": "node index.js"
+ "scripts": {
+    "start": "./start.sh"
   },
   "dependencies": {
   "puppeteer-extra": "^3.3.5",
